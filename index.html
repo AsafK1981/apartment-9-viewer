@@ -34,7 +34,10 @@ THE SOFTWARE.
 @media(max-width:900px){.topbar{padding:10px 16px;gap:18px}.notice{font-size:11px}.view-controls{left:16px;right:16px}.toolbar{padding:10px 16px;gap:12px}.scene-actions button{padding:8px 12px}#interaction-hint{font-size:11px;max-width:220px}.view-caption{right:18px;bottom:18px}.movement-controls{left:18px;bottom:18px}}
 @media(max-width:600px){body{min-height:460px}.topbar{height:66px;padding:9px 13px;justify-content:space-between;gap:10px}.brand h1{font-size:18px}.brand p{font-size:11px;margin-top:3px}.notice{display:none}.snapshot-button{font-size:12px;gap:7px;padding:8px 10px;min-height:40px}.snapshot-button svg{width:17px;height:17px}.view-controls{top:12px;left:12px;right:12px;gap:8px;flex-wrap:wrap}.view-switch{width:100%;justify-content:stretch}.view-switch button{flex:1;font-size:12px;padding:6px 8px;min-height:38px}.room-control{width:100%;padding:3px 10px 3px 4px;justify-content:space-between}.room-control select{width:210px;flex:1;margin-right:14px;font-size:12px}.room-control>span{white-space:nowrap;font-size:11px}.view-caption{right:12px;bottom:16px;max-width:calc(100% - 180px);padding:9px 11px}.view-caption h2{font-size:16px;margin-bottom:4px}.view-caption p{font-size:11px}.view-caption .mobile-notice{display:block}.movement-controls{left:12px;bottom:16px}.movement-controls button{width:42px;height:42px;font-size:22px}.movement-controls div{gap:8px}.movement-controls>button{margin-bottom:8px}.toolbar{min-height:88px;display:block;padding:9px 12px}.scene-actions{display:flex;gap:8px;justify-content:space-between}.scene-actions button{flex:1;padding:7px 8px;font-size:11px;white-space:nowrap;min-height:40px}.scene-actions .reset-view{flex:0 0 72px;justify-content:center;gap:5px}.reset-view svg{width:14px;height:14px}#interaction-hint{text-align:center;max-width:none;font-size:10px;margin:7px 0 0}.status-message{bottom:130px;max-width:calc(100% - 24px);font-size:11px}.fallback-message{top:120px;font-size:11px}.fallback-message strong{font-size:14px}#drawing-panel{padding:112px 5px 8px}.webgl-fallback #drawing-panel{padding-top:226px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
-</style>
+.zoom-controls{position:absolute;left:23px;bottom:24px;display:flex;flex-direction:column;gap:8px;direction:ltr;z-index:3}.zoom-controls button{width:44px;height:44px;min-height:44px;padding:0;font-size:27px;line-height:1;background:#faf9f5f0;border-color:#c9cebe}.zoom-controls button:active{background:#dce2d3}
+@media(max-width:900px){.zoom-controls{left:18px;bottom:18px}}
+@media(max-width:600px){.zoom-controls{left:12px;bottom:16px}}
+@media(max-height:500px) and (orientation:landscape){body{min-height:280px}.topbar{height:54px;padding:7px 14px}.brand h1{font-size:17px}.brand p{font-size:10px;margin-top:2px}.notice{display:none}.view-controls{top:10px;left:12px;right:12px;flex-wrap:nowrap;gap:10px}.view-switch{width:auto;flex-shrink:0}.view-switch button{font-size:11px;padding:6px 10px;min-height:36px}.room-control{width:auto;padding:3px 6px;max-width:230px}.room-control>span{display:none}.room-control select{width:170px;min-height:36px;margin:0;border:0}.toolbar{min-height:56px;padding:7px 12px;display:flex}.scene-actions{gap:8px}.scene-actions button{min-height:40px;padding:7px 12px}.scene-actions .reset-view{flex:0 0 auto}#interaction-hint{display:none}.view-caption{right:12px;bottom:12px;padding:8px 11px;max-width:250px}.view-caption .mobile-notice{display:none}.movement-controls{left:12px;bottom:12px}.zoom-controls{left:12px;bottom:12px}.movement-controls button{width:40px;height:40px}.movement-controls>button{margin-bottom:6px}#drawing-panel{padding-top:66px}.fallback-message{top:66px}.webgl-fallback #drawing-panel{padding-top:166px}}</style>
 </head>
 <body>
   <header class="topbar">
@@ -58,6 +61,10 @@ THE SOFTWARE.
     </div>
 
     <div class="view-caption"><h2 id="view-label">כל הדירה</h2><p id="view-detail">מבט פתוח על התכנון</p><p class="mobile-notice">מידות, גבהים וגימורים משוערים</p></div>
+    <nav id="zoom-controls" class="zoom-controls" aria-label="קירוב והרחקה">
+      <button type="button" data-zoom="in" aria-label="התקרבות לדירה" title="התקרבות">+</button>
+      <button type="button" data-zoom="out" aria-label="התרחקות מהדירה" title="התרחקות">-</button>
+    </nav>
     <nav id="movement-controls" class="movement-controls" aria-label="תנועה בחלל" hidden>
       <button type="button" data-move="forward" aria-label="צעד קדימה">↑</button>
       <div><button type="button" data-move="left" aria-label="צעד שמאלה">←</button><button type="button" data-move="back" aria-label="צעד אחורה">↓</button><button type="button" data-move="right" aria-label="צעד ימינה">→</button></div>
@@ -655,21 +662,30 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
   <script>(function () {
   'use strict';
   const spec=window.APARTMENT_SPEC||{},G=window.ApartmentGeometry,presets=spec.camerasSource||{},el=id=>document.getElementById(id);
-  const host=el('canvas-host'),drawing=el('source-drawing'),radius=.18;
+  const host=el('canvas-host'),drawing=el('source-drawing'),radius=.18,pointers=new Map(),minZoomDistance=7,maxZoomDistance=100;
   let renderer,scene,camera,model,target,view='overview',mode='orbit',doorsOpen=true,cutaway=true,webglError=null;
   let presetCollision=null,lastCollision=null,lastMovement=null,lastExport=null,drag=null,ready=false;
-  let fitPending=true,userZoom=1,lastSize=[0,0];
+  let fitPending=true,userZoom=1,lastSize=[0,0],pinch=null;
   drawing.src=window.SOURCE_DRAWING||spec.sourceDrawing||'';
   for(const [name,preset]of Object.entries(presets))if(preset.mode==='walk'){const option=document.createElement('option');option.value=name;option.textContent=preset.label;el('room-select').appendChild(option);}
 
   function notify(message,warning=false){const node=el('status-message');node.textContent=message;node.classList.toggle('warning',warning);node.hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>node.hidden=true,warning?5500:2800);}
   function render(){if(renderer&&scene&&camera&&!webglError&&view!=='drawing')renderer.render(scene,camera);}
+  function clearGesture(){const canvas=renderer?.domElement,ids=[...pointers.keys()];pointers.clear();drag=null;pinch=null;for(const id of ids)if(canvas?.hasPointerCapture(id))canvas.releasePointerCapture(id);}
+  function rebaseGesture(){const active=[...pointers.values()];if(active.length>1){drag=null;pinch={distance:Math.hypot(active[1].x-active[0].x,active[1].y-active[0].y)};}else{pinch=null;drag=active.length?{...active[0]}:null;}}
+  function zoomBy(factor){
+    if(!camera||webglError||(mode!=='orbit'&&mode!=='top')||!Number.isFinite(factor)||factor<=0)return;
+    const distance=camera.position.distanceTo(target);if(!Number.isFinite(distance)||distance<=0)return;
+    const next=Math.max(minZoomDistance,Math.min(maxZoomDistance,distance*factor));userZoom*=next/distance;
+    camera.position.sub(target).multiplyScalar(next/distance).add(target);camera.lookAt(target);render();
+  }
   function syncLabels(){if(!model)return;const show=mode==='orbit'||mode==='top';for(const item of model.labels||[]){item.sprite.visible=show;if(item.sprite.parent)item.sprite.parent.visible=show;}}
   function syncUI(){
     document.body.classList.toggle('drawing-mode',view==='drawing');
     el('drawing-panel').hidden=view!=='drawing';host.hidden=view==='drawing';
     el('fallback-message').hidden=!webglError;
     el('movement-controls').hidden=mode!=='walk'||!!webglError;
+    el('zoom-controls').hidden=(mode!=='orbit'&&mode!=='top')||!!webglError;
     for(const button of document.querySelectorAll('[data-view]')){const active=button.dataset.view===view;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));button.disabled=!!webglError&&button.dataset.view!=='drawing';}
     el('room-select').value=mode==='walk'?view:'';el('room-select').disabled=!!webglError;
     el('doors-toggle').setAttribute('aria-pressed',String(doorsOpen));el('doors-toggle').textContent=doorsOpen?'דלתות פתוחות':'דלתות סגורות';
@@ -678,7 +694,8 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
     el('reset-view').disabled=!!webglError;
     el('view-label').textContent=view==='drawing'?'השרטוט השמור':presets[view]?.label||'כל הדירה';
     el('view-detail').textContent=mode==='walk'?'מבט מתוך הדירה, בגובה עיניים':mode==='top'?'אותו תכנון, במבט מלמעלה':'מבט פתוח על התכנון';
-    el('interaction-hint').textContent=view==='drawing'?'השרטוט המאושר הוא הבסיס להמחשה':mode==='walk'?'גרירה למבט סביב · גלילה וחצים לתנועה':'גרירה לסיבוב · גלילה לקירוב';
+    const touch=window.matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0;
+    el('interaction-hint').textContent=view==='drawing'?'השרטוט המאושר הוא הבסיס להמחשה':mode==='walk'?(touch?'גרירה למבט סביב · כפתורי החצים לתנועה':'גרירה למבט סביב · גלילה וחצים לתנועה'):(touch?'גרירה לסיבוב · צביטה או כפתורי הזום לקירוב':'גרירה לסיבוב · גלילה או כפתורי הזום לקירוב');
     syncLabels();
   }
   function fitOverview(){
@@ -707,13 +724,15 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
       const factor=Math.max((right-left)/1.6,(top-bottom)/1.6);camera.position.sub(target).multiplyScalar(Math.max(.4,Math.min(3,factor))).add(target);camera.lookAt(target);
       if(Math.abs(factor-1)<.01&&Math.abs(cx)+Math.abs(cy)<.01)break;
     }
+    const fittedDistance=camera.position.distanceTo(target),next=Math.max(minZoomDistance,Math.min(maxZoomDistance,fittedDistance*userZoom));userZoom=next/fittedDistance;
     camera.position.sub(target).multiplyScalar(userZoom).add(target);camera.lookAt(target);
   }
-  function resize(){if(!renderer||!camera||view==='drawing')return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;const changed=w!==lastSize[0]||h!==lastSize[1];renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(changed||fitPending){fitOverview();fitPending=false;lastSize=[w,h];}render();}
+  function resize(){if(!renderer||!camera||view==='drawing')return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;const changed=w!==lastSize[0]||h!==lastSize[1];if(changed)clearGesture();renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(changed||fitPending){fitOverview();fitPending=false;lastSize=[w,h];}render();}
   function setCutaway(value){cutaway=!!value;if(model)model.setCutaway(cutaway);syncUI();render();return getState();}
   function setDoors(value){doorsOpen=!!value;if(model)model.allDoors(doorsOpen);if(model&&mode==='walk'){const hit=model.collision([camera.position.x,camera.position.z],radius);if(hit.blocked){lastCollision=hit;notify('הדלת סמוכה לנקודת המבט. אפשר לבחור מבט חדר או לפתוח שוב את הדלתות.',true);}}syncUI();render();return getState();}
   function setView(name){
     if(name!=='drawing'&&!Object.hasOwn(presets,name))throw new Error('Unknown apartment view: '+name);
+    clearGesture();
     if(webglError&&name!=='drawing'){notify('התלת ממד לא זמין כרגע. השרטוט השמור מוצג כאן.',true);return getState();}
     if(name==='drawing'){view='drawing';mode='drawing';presetCollision=null;syncUI();return getState();}
     const preset=presets[name],position=G.toWorld(spec,preset.position,preset.height),aim=G.toWorld(spec,preset.target,preset.targetHeight||0);
@@ -747,7 +766,8 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
   }
   function getState(){
     return {ready,view,mode,doorsOpen,cutaway:model?model.getCutaway():cutaway,webglError,presetCollision,lastCollision,lastMovement,lastExport,navigationRadius:radius,
-      camera:camera?{position:camera.position.toArray(),target:target.toArray(),sourcePosition:G.toSource(spec,camera.position.toArray()),fov:camera.fov}:null,
+      camera:camera?{position:camera.position.toArray(),target:target.toArray(),sourcePosition:G.toSource(spec,camera.position.toArray()),fov:camera.fov,up:camera.up.toArray()}:null,
+      zoom:{factor:userZoom,minDistance:minZoomDistance,maxDistance:maxZoomDistance},
       geometry:model?{walls:model.wallMeshes.length,wallRecords:model.wallRecords.length,windows:model.windowRecords.length,doors:model.doorObjects.length,fixtures:model.fixtureRecords.length,labels:model.labels.length,doorStates:model.doorObjects.map(d=>({id:d.source.id,open:d.open,width:d.pose.width,angle:d.pose.angle,start:d.pose.start,end:d.pose.end,contextJambOffsetX:d.pose.contextJambOffsetX}))}:null};
   }
   async function exportSnapshot(){
@@ -764,6 +784,7 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
   for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>setView(button.dataset.view));
   el('room-select').addEventListener('change',event=>{if(event.target.value)setView(event.target.value);});
   for(const button of document.querySelectorAll('[data-move]'))button.addEventListener('click',()=>move(button.dataset.move));
+  for(const button of document.querySelectorAll('[data-zoom]'))button.addEventListener('click',()=>zoomBy(button.dataset.zoom==='in'?1/1.2:1.2));
   el('doors-toggle').addEventListener('click',()=>setDoors(!doorsOpen));el('cutaway-toggle').addEventListener('click',()=>setCutaway(!cutaway));
   el('reset-view').addEventListener('click',()=>setView('overview'));
   el('snapshot-button').addEventListener('click',async()=>{const button=el('snapshot-button');button.disabled=true;try{const url=await exportSnapshot(),a=document.createElement('a');a.href=url;a.download=lastExport.filename;document.body.appendChild(a);a.click();a.remove();notify('התמונה הוכנה לשמירה');}catch(error){notify('לא ניתן לשמור תמונה כרגע. אפשר לנסות את תצוגת השרטוט.',true);}finally{button.disabled=false;}});
@@ -771,16 +792,18 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
   try{
     if(!window.THREE||!G||!window.KitchenGeometry)throw new Error('Local scene library unavailable');
     renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-    const canvas=renderer.domElement;canvas.tabIndex=0;canvas.setAttribute('aria-label','תצוגת תלת ממד. גרירה למבט סביב, חצים לתנועה מתוך חדר.');host.appendChild(canvas);
+    const canvas=renderer.domElement;canvas.tabIndex=0;canvas.setAttribute('aria-label','תצוגת תלת ממד. גרירה למבט סביב, צביטה בשתי אצבעות לקירוב במבט הכללי, חצים לתנועה מתוך חדר.');host.appendChild(canvas);
     scene=new THREE.Scene();scene.background=new THREE.Color('#e9e7df');scene.fog=new THREE.Fog('#e9e7df',85,160);camera=new THREE.PerspectiveCamera(43,1,.025,200);target=new THREE.Vector3();
     scene.add(new THREE.HemisphereLight('#fff8eb','#a59e8b',1.2),new THREE.AmbientLight('#ffffff',.25));
     const sun=new THREE.DirectionalLight('#fff4df',1.8);sun.position.set(2,24,9);sun.target.position.set(8,0,-2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-23,right:23,top:23,bottom:-23,near:1,far:65});sun.shadow.bias=-.0002;sun.shadow.normalBias=.025;scene.add(sun,sun.target);
     const fill=new THREE.DirectionalLight('#e9f1f1',.6);fill.position.set(16,12,-17);scene.add(fill);
     model=G.create(spec,THREE,KitchenGeometry);scene.add(model.group);model.allDoors(true);
     for(const item of model.labels||[]){item.sprite.material.toneMapped=false;if(item.sprite.material.map){item.sprite.material.map.colorSpace=THREE.SRGBColorSpace;item.sprite.material.map.needsUpdate=true;}}
-    canvas.addEventListener('pointerdown',event=>{if(event.button!==0&&event.pointerType!=='touch')return;if(drag)return;canvas.focus({preventScroll:true});canvas.setPointerCapture(event.pointerId);drag={id:event.pointerId,x:event.clientX,y:event.clientY};});
-    const release=event=>{if(drag&&event.pointerId===drag.id)drag=null;};canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',()=>drag=null);
+    canvas.addEventListener('pointerdown',event=>{if(event.button!==0&&event.pointerType!=='touch')return;event.preventDefault();canvas.focus({preventScroll:true});canvas.setPointerCapture(event.pointerId);pointers.set(event.pointerId,{id:event.pointerId,x:event.clientX,y:event.clientY});rebaseGesture();});
+    const release=event=>{if(!pointers.delete(event.pointerId))return;rebaseGesture();};canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
     canvas.addEventListener('pointermove',event=>{
+      if(!pointers.has(event.pointerId))return;event.preventDefault();pointers.set(event.pointerId,{id:event.pointerId,x:event.clientX,y:event.clientY});
+      if(pointers.size>1){const active=[...pointers.values()],distance=Math.hypot(active[1].x-active[0].x,active[1].y-active[0].y);if(pinch&&pinch.distance>1&&distance>1)zoomBy(pinch.distance/distance);pinch={distance};return;}
       if(!drag||event.pointerId!==drag.id)return;const dx=(event.clientX-drag.x)*.004,dy=(event.clientY-drag.y)*.004;drag.x=event.clientX;drag.y=event.clientY;
       if(mode==='walk'){
         const spherical=new THREE.Spherical().setFromVector3(target.clone().sub(camera.position));spherical.theta-=dx;spherical.phi=Math.max(.25,Math.min(Math.PI-.25,spherical.phi-dy));target.copy(camera.position).add(new THREE.Vector3().setFromSpherical(spherical));
@@ -789,8 +812,9 @@ return{clone,toWorld,toSource,kitchenPhoto,kitchenWorld,kitchenSpec,doorPose,poi
       }
       camera.lookAt(target);render();
     });
-    canvas.addEventListener('wheel',event=>{event.preventDefault();if(mode==='walk')move(event.deltaY<0?'forward':'back',.24);else{const distance=camera.position.distanceTo(target),next=Math.max(7,Math.min(100,distance*Math.exp(event.deltaY*.0008)));userZoom*=next/distance;camera.position.sub(target).multiplyScalar(next/distance).add(target);camera.lookAt(target);render();}},{passive:false});
-    canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();fallback(new Error('WebGL context lost'));});
+    canvas.addEventListener('wheel',event=>{event.preventDefault();if(mode==='walk')move(event.deltaY<0?'forward':'back',.24);else zoomBy(Math.exp(Math.max(-2000,Math.min(2000,event.deltaY))*.0008));},{passive:false});
+    canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();clearGesture();fallback(new Error('WebGL context lost'));});
+    window.addEventListener('blur',clearGesture);
     window.addEventListener('resize',resize);if(window.ResizeObserver)new ResizeObserver(resize).observe(host);
     const initial=location.hash.slice(1);setView(Object.hasOwn(presets,initial)||initial==='drawing'?initial:'overview');
   }catch(error){console.error('Apartment viewer:',error);fallback(error);}
