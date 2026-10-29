@@ -1,11 +1,9 @@
-# Apartment 9 planning dossier and interactive viewer
+# Apartment 9 - current public design
 
-Approved r7 apartment layout in a self-contained browser viewer.
+Current design: revision12 from the user-approved H layout. The root page is the interactive whole-apartment model; project/current-plan.html is the full plan with drawing and original-source comparison. project/ contains the planning dossier and clearly linked previous r10 material.
 
-The current r10 proposal removes the stepped family-bath partition, enlarges the room into most of that notch, relocates its entrance to the southwest and closes the former shower-side entrance. A small assumed13cm entry setback separates the new door from the closed MMD door. Full MMD opening remains obstructed in the illustrative study and requires architect coordination. A separate visible MMD control starts closed and allows inspection; this does not approve any restriction on the real door. The r9 kitchen, entrance panel, all windows, balcony slider, sanitary fixtures and other rooms are retained.
+The family bathroom door opens inward right; the shower entry remains at its upper right side. The private corridor and pocket entry are removed. Both double vanities and the L closet are updated, without reducing the master-bedroom area. The remaining apartment and facade opening positions are retained.
 
-Open the root page to explore the model. Use the room selector and drag to look around. In the overview and top views, pinch with two fingers or use the plus and minus buttons to zoom. The model and dimensions are illustrative, based on the approved design study.
+The model displays9 ordinary windows and2 balcony sliders. All dimensions, heights, glazing and hardware are illustrative. The protected-room door range conflict with the proposed wall and shower remains visible and requires architect coordination.
 
-Open project/ for the Hebrew planning dossier: the current proposal and annotated request, readable decisions, door-state comparison, architect questions, original drawing and clearly labeled planning history. Fridge selection, panel details, relocated guest and master toilets and the new bathroom/MMD door arrangement remain open architect questions.
-
-This repository contains the standalone public viewer and a curated export of planning documents and design images. Operational files, internal instructions, test reports and unrelated workspace materials are kept outside this repository. GitHub Pages serves these static files without a paid runtime service.
+This is a curated static export on the existing free GitHub Pages site. Internal instructions, tests, unrelated files and the rejected r11A proposal are not exported.
